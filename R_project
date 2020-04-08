@@ -1,0 +1,190 @@
+rm(list=ls())
+ls()
+## Set up current working directory
+setwd("C:\\Users\\admin\\Desktop\\R-Project") # "My Current Working Directory"
+getwd()
+
+## Preparing Raw data
+raw=read.csv("Airbag and other influences on accident fatalities.csv")
+head(raw,5)
+str(raw)
+
+## data clean up & get random sample dataset 
+nrow(raw);dim(raw)
+raw1<-raw[raw$dvcat != "24-Oct",]
+nrow(raw1)
+n=sample(nrow(raw1),2000)
+airbag_RS=raw1[n,]
+head(airbag_RS)
+
+## save sample dataset as CSV file
+write.csv(airbag_RS,"airbag.csv", row.names = FALSE)
+
+
+## --- Data Manupilation ****(START FROM HERE) ****
+
+# use the Current random sample file - airbag.csv for ongoing data analysis from now on
+Airbag=read.csv("airbag.csv")
+str(Airbag)
+head(Airbag,5)
+
+attach(Airbag)
+
+install.packages("tidyverse")
+library(tidyverse)
+par(mar=c(5, 4, 4, 2) + 0.1)
+
+
+## ---*** Data Analysis in R with dataset: Airbag ***---
+
+# calculate frequency of each defined Age Group counts: 
+
+###-------------------Option 1: Vector Slicing -------------------------
+
+AgeGrp1 <- length(ageOFocc[ageOFocc>=16 & ageOFocc<26])
+AgeGrp2 <- length(ageOFocc[ageOFocc>=26 & ageOFocc<36])
+AgeGrp3 <- length(ageOFocc[ageOFocc>=36 & ageOFocc<46])
+AgeGrp4 <- length(ageOFocc[ageOFocc>=46 & ageOFocc<56])
+AgeGrp5 <- length(ageOFocc[ageOFocc>=56 & ageOFocc<66])
+AgeGrp6 <- length(ageOFocc[ageOFocc>=66 & ageOFocc<76])
+AgeGrp7 <- length(ageOFocc[ageOFocc>=76 & ageOFocc<86])
+AgeGrp8 <- length(ageOFocc[ageOFocc>=86 & ageOFocc<100])
+
+Age_Grp <- c("16-26"=AgeGrp1, "26-36"=AgeGrp2, "36-46"=AgeGrp3, "46-56"=AgeGrp4, 
+             "56-66"=AgeGrp5, "66-76"=AgeGrp6, "76-86"=AgeGrp7, "86+"=AgeGrp8)
+Age_Grp
+
+###-------------------Option 2: Using For Loops -----------------
+
+n=round((max(ageOFocc)-min(ageOFocc))/10)
+
+for (i in 1:n){
+  AgeGrpi <- length(ageOFocc[ageOFocc>=10*i+6 & ageOFocc<10*i+16]);
+  print(AgeGrpi)
+}
+
+# As length(ageOFocc[ageOFocc>=96] =1, so last AgeGrp(ie,AgeGrp8)=11+1 to ensure data accuracy)
+AgeGrp8 <- 11 + length(ageOFocc[ageOFocc>=10*n + 16])
+
+Age_Grp <- c("15-25"=AgeGrp1, "25-35"=AgeGrp2, "35-45"=AgeGrp3, "45-55"=AgeGrp4, 
+             "55-65"=AgeGrp5, "65-75"=AgeGrp6, "75-85"=AgeGrp7, "85+"=AgeGrp8)
+Age_Grp
+
+###---------------------------------------------
+
+# Add new column "AgeGrp" and value to dataset: Airbag, based on "ageOFocc" value
+
+Airbag$AgeGrp <- NULL
+
+Airbag$AgeGrp[ageOFocc>=16 & ageOFocc<26] <- "AgeGrp1"
+Airbag$AgeGrp[ageOFocc>=26 & ageOFocc<36] <- "AgeGrp2"
+Airbag$AgeGrp[ageOFocc>=36 & ageOFocc<46] <- "AgeGrp3"
+Airbag$AgeGrp[ageOFocc>=46 & ageOFocc<56] <- "AgeGrp4"
+Airbag$AgeGrp[ageOFocc>=56 & ageOFocc<66] <- "AgeGrp5"
+Airbag$AgeGrp[ageOFocc>=66 & ageOFocc<76] <- "AgeGrp6"
+Airbag$AgeGrp[ageOFocc>=76 & ageOFocc<86] <- "AgeGrp7"
+Airbag$AgeGrp[ageOFocc>=86 & ageOFocc<100] <- "AgeGrp8"
+
+head(Airbag)
+str(Airbag)
+attach(Airbag)
+
+##-- Question 1: Overall Age Distribution of the number of people who had car accidents
+
+summary(ageOFocc)
+
+ggplot(data = Airbag) + 
+  geom_bar(mapping = aes(x = ageOFocc))
+
+
+##-- QUESTION 2: Histogram & Density Distribution of Car Accidents based on Age ("ageOFocc")  
+
+hist(ageOFocc,col="light blue",xlab="Age",col.lab="blue", xlim=c(16,100),labels= TRUE,
+     main="Histogram by Age - ageOFocc")
+
+hist(ageOFocc,col="light Blue",xlab="Age",ylab="Density",freq=FALSE,col.lab="blue",
+     xlim=c(16,100),labels= TRUE, main="Histogram by Age - ageOFocc") 
+lines(density(ageOFocc),col="red")
+
+
+##-- QUESTION 3: Boxplot Analysis of Year of Vehicle / Accidents by Age Groups
+
+boxplot(yearVeh~AgeGrp, xlab="Age Group", ylab="Year of Vehicle Involved", 
+        col=rainbow(length(unique(AgeGrp)))) 
+
+boxplot(yearacc~AgeGrp, xlab="Age Group", ylab="Year of Accidents", 
+        col=rainbow(length(unique(AgeGrp)))) 
+
+
+##-- QUESTION 4: Boxplot Analysis of Age & Injury Severity Level Info
+
+boxplot(ageOFocc~injSeverity, xlab="Injury Severity Level", ylab="Age", 
+        col=rainbow(length(unique(injSeverity)))) 
+
+legend("topright", inset=.01, title="Boxplot: Age vs InjSeverity",
+       c("0","1","2","3","4","5"), fill=rainbow(length(unique(injSeverity))), horiz=TRUE, cex=0.6)
+
+
+##--QUESTION 5: Pie Chart of Car Accidents for each Age Group ("Age_Grp")
+
+lbls <- names(Age_Grp)
+pct <- round(Age_Grp/sum(Age_Grp)*100)
+lbls <- paste(lbls," ","(",pct, sep="") 
+lbls <- paste(lbls,"%)",sep="")
+
+pie(Age_Grp,labels = lbls, col=rainbow(length(lbls)),
+    main="Pie Chart of Age Groups")
+
+
+##--QUESTION 6: Grouped Bar Plot of Gender Analysis by Age Group  
+
+counts <- table(AgeGrp, sex)
+barplot(counts, main="Gender Analysis by Age Group",
+        xlab="Female vs. Male", col=rainbow(length(unique(AgeGrp))),
+        legend = rownames(counts), beside=TRUE)
+
+
+##--QUESTION 7: Pie Chart of Different Speed Range which caused Car Accidents 
+
+library(plotrix)
+speed = summary(dvcat)
+
+lbls <- names(speed)
+pct <- round(speed/sum(speed)*100)
+lbls <- paste(lbls," ","(",pct, sep="") 
+lbls <- paste(lbls,"%)",sep="")
+
+pie3D(speed,labels = lbls, col=rainbow(length(lbls)), explode=0.05,
+    main="Pie Chart: Accidents on Different Speed Range") 
+
+
+##--QUESTION 8: Grouped Bar Plot of Dead or Alive by Age Group  
+
+x <- table(AgeGrp, dead)
+barplot(x, main="Fatality Analysis by Age Group",
+        xlab="Alive or Dead", col=rainbow(length(unique(AgeGrp))),
+        legend = rownames(x), beside=TRUE)
+
+
+##--QUESTION 9: Grouped Bar Plot of Car Seat Analysis by Age Group 
+
+y <- table(AgeGrp, occRole)
+barplot(y, main="Car Seat Analysis by Age Group",
+        xlab="Driver or Passenger seat", col=rainbow(length(unique(AgeGrp))),
+        legend = rownames(y), beside=TRUE)
+
+
+##--QUESTION 10: Injury Severity Analysis on each Age Group by ggplot2
+
+qplot(AgeGrp, injSeverity, geom="boxplot")
+
+
+##-- Summary: Combining Histogram into One Page Layout
+
+layout(matrix(c(1,2,3,4), 2, 2, byrow = TRUE),
+       widths=c(1,1), heights=c(1,1))
+
+hist(ageOFocc)
+hist(yearacc)
+hist(yearVeh)
+hist(injSeverity)
