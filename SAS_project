@@ -1,0 +1,409 @@
+libname hc "C:\Users\HarryC\Desktop\ASP_MINI";
+
+/* Preparing SAS MINI Project dataset  -  Option 1: Reading from 'New_Wireless_Pipe.txt' file */
+
+data hc.wirelss;
+	length Acctno $13 DeactReason $4 Goodcredit 3 Rateplan 3 DealerType $2 Age 3 Province $2;
+	infile "D:\My Documents\Personal\DSA Training\SAS-Advanced\Mini Project\New_Wireless_Pipe.txt" 
+		DSD dlm='|' firstobs=2;
+	informat Actdt mmddyy10. Deactdt mmddyy10.;
+	input Acctno $ Actdt Deactdt Deactreason $ Goodcredit Rateplan Dealertype $ AGE Province $ Sales;
+run;
+
+/* Mini Project SAS Dataset Preparation - Option 2: Reading from 'New_Wireless_Fixed.txt' file */
+
+data hc.wireless;
+	infile "D:\My Documents\Personal\DSA Training\SAS-Advanced\Mini Project\New_Wireless_Fixed.txt";
+	input 	@1		Acctno 			$13.
+		@15		Actdt			mmddyy10.
+		@26		Deactdt			mmddyy10.
+		@41		DeactReason		$4.
+		@53		GoodCredit		1.
+		@62		RatePlan		1.
+		@65		DealerType		$2.
+		@74		AGE			2.
+		@80		Province		$2.
+		@85		Sales  			dollar8.2
+			;
+	format Sales dollar8.2 Actdt mmddyy10. Deactdt mmddyy10.;
+run;
+
+proc freq data=hc.wireless;
+	table province / missing list;
+run;
+
+/*  1.1 Explore and describe the dataset briefly  */
+* Analyze Wireless dataset with Proc contents ;
+
+proc contents data=hc.wireless;
+run;
+
+* Analyze if the acctno is unique in Wireless dataset ;
+
+proc sort data=hc.wireless nodupkey dupout=hc.wireless_dup;
+	by acctno;
+run;
+proc contents data=hc.wireless_dup; run;
+
+* Count number of accounts activated and deactivated ;
+
+data hc.wireless_1;
+	set hc.wireless;
+	Actnum=input(Acctno, 13.);
+	if Actdt ^=. and Deactdt =. then Active=1;
+	else Active=0;
+run;
+proc freq data=hc.wireless_1;
+	table active /missing list;
+run;
+
+* The earliest and latest activation/deactivation dates available ;
+
+proc means data=hc.wireless N MIN MAX maxdec=0;
+	var actdt deactdt;
+	format _MIN_ _MAX_ ddmmyy10.;	
+run;
+data t1;
+	input type $ min_date max_date;
+cards;
+Actdt	14264	14995
+Deactdt	14269	14995
+; run;
+proc print data=t1;
+	format min_date max_date ddmmyy10.;
+run;
+
+
+/*  1.2 Age and Province distribution of active and deactivated customers  */
+* Age and Province distribution of active customers ;
+
+data hc.active;
+	set hc.wireless_1 (where=(Active=1));
+run;
+
+data hc.deactive;
+	set hc.wireless_1 (where=(Active=0));
+run;
+
+proc sort data=hc.active;
+	by age province;
+run;
+
+proc freq data=hc.wireless_1;
+	table province*active /missing list;
+run;
+
+proc sgplot data=hc.active;
+	histogram age /showbins scale=count;
+	density age /type=kernel;
+	title "Age Distribution of Active Customers by Count";
+run;
+
+proc gchart data=hc.active;
+	pie province /discrete value=inside percent=outside slice=outside;
+run;
+
+proc sgplot data=hc.active;
+	vbar province/groupdisplay=cluster;
+	title "Bar Chart of Province Distribution on Number of Active Customers";
+run;
+
+* Age and Province distribution of deactivated customers ;
+
+proc sort data=hc.deactive;
+	by age province;
+run;
+
+proc sgplot data=hc.deactive;
+	histogram age /showbins scale=count;
+	density age /type=kernel;
+	title "Age Distribution of Deactivated Customers by Count";
+run;
+
+proc gchart data=hc.deactive;
+	pie province /discrete value=inside percent=outside slice=outside;
+run;
+
+proc sgplot data=hc.deactive;
+	vbar province/groupdisplay=cluster;
+	title "Bar Chart of Province Distribution on Number of Deactivated Customers";
+run;
+
+/* Distribution of Account Status by Age Group */
+proc format library=hc;
+	value 	agefmt
+			.		= 'Missing'
+			0		= 'Missing'
+			1-<20	= '<=20 yr'
+			21-40	= '21-40 yr'
+			41-60  = '41-60 yr'
+			61-high = '61+ yr';
+	
+libname library "C:\Users\HarryC\Desktop\ASP_MINI";	
+proc freq data=hc.wireless_1 ;
+  table age*active/missing list;
+  format age agefmt.;
+  title "Distribution of Account Status by Age Group";
+run;
+
+/*  1.3 Segment the customers based on age, province and sales amount; Create analysis report;  */
+
+/* Segment of Deactivated account based on DeactReason */
+
+proc freq data=hc.wireless_1;
+	table active*DeactReason /missing list;
+	title "Segment of Deactivated account by DeactReason";
+run;
+
+/* Segment Province and Sales Amout from Active and Deactivated Customers */
+
+proc format library=hc;
+	value 	salefmt
+			 Low -<100='<100  '
+	 		100 -<500='100-499'
+	 		500 -<800='500-799'
+	 		800 -high='800 + '
+	 ;
+proc tabulate data=hc.wireless_1(where=(Active=1)) missing;
+  class province sales;
+  var Actnum;
+  format sales salefmt.;
+  table province=' ' all,
+        sales='Sales Amount'*Actnum=' '*N/box='Province';
+  title "Segment of Province vs. Sales Amount";
+  title2 "- Active Customer";
+run;
+
+proc tabulate data=hc.wireless_1(where=(Active=0)) missing;
+  class province sales;
+  var Actnum;
+  format sales salefmt.;
+  table province=' ' all='Total',
+        sales='Sales Amount'*Actnum=' '*N /box='Province';
+  title "Segment of Province vs. Sales Amount";
+  title2 "- Deactivated Customer Analysis";
+run;
+
+proc tabulate data=hc.wireless_1(where=(Active=1)) missing;
+  class age sales;
+  var Actnum;
+  format age agefmt. sales salefmt.;
+  table age=' ' all,
+        sales='Sales Amount'*Actnum=' '*N / box='Age';
+  title " Analysis of Spending by Age Group ";
+  title2 "- Active Customer";
+run;
+
+proc tabulate data=hc.wireless_1(where=(Active=0)) missing;
+  class age sales;
+  var Actnum;
+  format age agefmt. sales salefmt.;
+  table age=' ' all,
+        sales='Sales Amount'*Actnum=' '*N / box='Age';
+  title " Analysis of Spending by Age Group ";
+  title2 "- Deactivated Customer";
+run;
+
+proc tabulate data=hc.wireless_1(where=(Active=1)) missing;
+  class province age sales;
+  var Actnum;
+  format age agefmt. sales salefmt.;
+  table province=' ' all,
+        age=' '*sales='Sales Amount'*Actnum=' '*N='# of Acct'/ box='Province';
+  title "Segment of Province and Age on Sales";
+  title2 "Active Customer";
+run;
+
+proc tabulate data=hc.wireless_1(where=(Active=0)) missing;
+  class province age sales;
+  var Actnum;
+  format age agefmt. sales salefmt.;
+  table province=' ' all,
+        age=' '*sales='Sales Amount'*Actnum=' '*N='# of Acct'/ box='Province';
+  title "Segment of Province and Age on Sales";
+  title2 "Deactivated Customer";
+run;
+
+ods listing close;
+ods html file="Active.xls";
+proc tabulate data=hc.wireless_1(where=(Active=1)) missing;
+  class province age sales;
+  var Actnum;
+  format age agefmt. sales salefmt.;
+  table  province=' ' all='Total',
+         age=' '*sales='Sales'*Actnum=' '*N=' '/ box='Province';
+  title "Segment of Province and Age on Sales";
+  title2 "Active Customer";
+run;
+ods _all_ close;
+ods listing;
+
+ods listing close;
+ods html file="Deactive.xls";
+proc tabulate data=hc.wireless_1(where=(Active=0)) missing;
+  class province age sales;
+  var Actnum;
+  format age agefmt. sales salefmt.;
+  table  province=' ' all='Total',
+         age=' '*sales='Sales'*Actnum=' '*N=''/box='Province';
+  title "Segment of Province and Age on Sales";
+  title2 "Deactivated Customer";
+run;
+ods _all_ close;
+ods listing;
+
+/* 	1.4 Statistical Analysis */
+/*	1.4.1 Calculate the tenure in days for each account and give its simple statistics. */
+
+proc sort data=hc.wireless_1(keep=Actdt) out=hc.sort_date;
+  by Actdt;
+run;
+
+data hc.start;
+  set hc.sort_date;
+  by Actdt;
+  if _N_=1;
+run;
+
+data hc.end;
+  set hc.sort_date end=last;
+  by Actdt;
+  if last;
+run;
+
+data hc.time_frame;
+  set hc.start hc.end;
+run;
+
+proc print data=hc.time_frame;
+  var Actdt;
+  format Actdt date9.;
+run;
+/* 
+Obs		Actdt
+1		20JAN1999 
+2		20JAN2001 
+*/
+
+data hc.wireless1;
+  set hc.wireless_1;;
+
+  if Deactdt=. then
+    do;
+       tenure=intck('day', Actdt,'20JAN2001'D);
+	end;
+  else if Deactdt ^=. then
+    do;
+	   tenure=intck('day',Actdt, Deactdt);
+	end;
+  else   
+    do;
+	   tenure=.;
+	end; 
+run;
+
+proc means data=hc.wireless1 n nmiss min mean max;
+  class active;
+  var tenure;
+run;
+
+/*1.4.2	  Calculate the number of accounts deactivated for each year month.	*/
+
+data hc.Deact;
+  set hc.wireless_1(where=(active=0));
+  deactive_year=year(Deactdt);
+  deactive_mth=month(Deactdt);
+  d_year_mth=deactive_year*100+deactive_mth;
+run;
+
+proc freq data=hc.Deact;
+  table d_year_mth/missing list;
+  table deactive_year*deactive_mth/missing list;
+run;
+
+proc tabulate data=hc.Deact missing;
+  class deactive_year deactive_mth;
+  var actnum;
+  table deactive_mth=' ' all,
+        deactive_year=' '*actnum=' '*(N='#'*F=comma6.0 pctsum<deactive_year>='% of column')
+		/box='MTH/YEAR';
+run;
+
+/*1.4.3   Segment the account,and report the number of accounts of percentage of all for each segment. */
+
+proc format library=hc;
+  value tenurefmt
+    low-<30 ='< 30 days    '
+	30-<61  ='30-60 days   '
+	61-<183 ='61-183 days  '
+	183-<365 ='183-365 days '
+	365-high='Over one year'
+	;
+run;
+
+libname library "C:\Users\HarryC\Desktop\ASP_MINI";
+proc tabulate data=hc.wireless1 missing noseps;
+  class active tenure;
+  var Actnum;
+  format tenure tenurefmt.;
+  table  active=' ',
+        tenure=' '*Actnum=' '*(N='#'*F=comma6.0 pctsum<tenure>='% of row') / box='Account Status';
+run;
+
+proc freq data=hc.wireless1;
+  table active*tenure/missing list;
+  format tenure tenurefmt.;
+run;
+
+/*1.4.4  Test general association between tenure segments and ?ood Credit",?atePlan ?and ?ealerType. */
+
+proc tabulate data=hc.wireless1(where=(active=0)) missing ;
+  class tenure goodcredit rateplan dealertype;
+  var actnum;
+  format tenure tenurefmt.;
+  table  tenure=' '*
+         (N pctsum<tenure>='% of column'),
+         goodcredit*actnum=' ' 
+         rateplan*actnum=' '
+         dealertype*actnum=' '/box='Tenure';
+run;
+
+
+proc freq data=hc.wireless1(where=(active=0));
+  table dealertype/missing list;;
+  table goodcredit/missing list;
+  table rateplan/missing list;
+run;
+
+/*1.4.5  Find association between account status and the tenure segments */
+
+proc freq data=hc.wireless1;
+  table active*tenure;
+  format tenure tenurefmt.;
+run;
+
+/*1.4.6  Find association between Sales amount and different account status, GoodCredit, and customer age segments */
+
+proc means data=hc.wireless1 min mean max sum;
+  class  active age goodcredit;
+  var sales;
+  format age agefmt.;
+run;
+
+proc tabulate data=hc.wireless1 missing noseps;
+  class active age goodcredit;
+  var sales;
+  format age agefmt.;
+  table  active*age=' ',
+         goodcredit*sales=' '*(mean)/box="Status";
+run;
+
+
+proc tabulate data=hc.wireless1 missing noseps;
+  class active age goodcredit;
+  var sales;
+  format age agefmt.;
+  table  active, age=' ',
+         goodcredit*sales=' '*( mean)/box="Status";
+run;
+
