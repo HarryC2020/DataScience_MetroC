@@ -1,0 +1,451 @@
+Create Database Bank;
+
+Use Bank;
+
+---------------Phase 1----------------------
+
+--Create 9 PK-only tables
+
+create table UserLogins
+(
+ UserLoginID smallint Primary Key Not Null, 
+ UserLogin char(15) Not Null,
+ UserPassword varchar(20) Not Null
+);
+
+insert into UserLogins values (11, 'abc', 'abc11');
+insert into UserLogins values (22, 'def', 'def22');
+insert into UserLogins values (33, 'ghi', 'ghi33');
+insert into UserLogins values (44, 'jkl', 'jkl44');
+
+create table UserSecurityQuestions
+(
+ UserSecurityQuestionID tinyint Primary Key Not Null,
+ UserSecurityQuestion varchar(50) Not Null
+);
+
+insert into UserSecurityQuestions values (1, 'What is the car make of your first car?');
+insert into UserSecurityQuestions values (2, 'Which city were you born?');
+insert into UserSecurityQuestions values (3, 'What is your mother first name?');
+insert into UserSecurityQuestions values (4, 'What is the name of your pet?');
+
+create table SavingsInterestRates
+(
+ InterestSavingsRateID tinyint Primary Key Not Null,
+ InterestRateValue numeric(9,9) Not Null,
+ InterestRateDescription varchar(20)
+);
+
+insert into SavingsInterestRates values (1, 0.0295000, '5-year fixed rate');
+insert into SavingsInterestRates values (2, 0.0325000, '3-year fixed rate');
+insert into SavingsInterestRates values (3, 0.0340000, '2-year fixed rate');
+insert into SavingsInterestRates values (4, 0.0265000, '5-year variable rate');
+
+create table FailedTransactionErrorType 
+(
+ FailedTransactionErrorTypeID tinyint Primary Key Not Null,
+ FailedTransactionDescription varchar(50) Not Null
+);
+
+insert into FailedTransactionErrorType values (1, 'username/password wrong');
+insert into FailedTransactionErrorType values (2, 'no sufficient fund');
+insert into FailedTransactionErrorType values (3, 'timeout');
+insert into FailedTransactionErrorType values (4, 'fraud activity');
+
+create table LoginErrorLog
+(
+ ErrorLogID int Primary Key Not Null,
+ ErrorTime datetime,
+ FailedTransactionXML xml
+ );
+
+insert into LoginErrorLog values (1, '2018/10/29 10:33:33.229', 'www.12hs.ca');
+insert into LoginErrorLog values (2, '2019/03/19 01:27:09.156', 'www.sh-123er.org');
+insert into LoginErrorLog values (3, '2017/05/16 03:12:23.125', 'www.sahdny.com');
+insert into LoginErrorLog values (4, '2018/12/22 10:26:35.89', 'www.567bidding.cn');
+
+create table AccountStatusType
+(
+ AccountStatusTypeID tinyint Primary Key Not Null,
+ AccountStatusDescription varchar(30)
+);
+
+insert into AccountStatusType values (1, 'closed account');
+insert into AccountStatusType values (3, 'suspended account');
+insert into AccountStatusType values (5, 'new account within 30days');
+insert into AccountStatusType values (9, 'normal account');
+
+create table AccountType
+(
+ AccountTypeID tinyint Primary Key Not Null,
+ AccountTypeDescription varchar(30)
+);
+
+insert into AccountType values (1, 'Checking account');
+insert into AccountType values (3, 'Savings account');
+insert into AccountType values (5, 'TFSA account');
+insert into AccountType values (9, 'RRSP account');
+
+create table TransactionType
+(
+ TransactionTypeID tinyint Primary Key Not Null,
+ TransactionTypeName char(10),
+ TransactionTypeDescription varchar(50),
+ TransactionFeeAmount smallmoney Not Null
+);
+
+insert into TransactionType values (1, 'Dep-cash', 'cash deposit', 0.00);
+insert into TransactionType values (2, 'Dep-check', 'cheque deposit', 0.25);
+insert into TransactionType values (3, 'Withdraw', 'cash withdrawal', 0.50);
+insert into TransactionType values (4, 'Transfer', 'E-Transfer', 0.10);
+
+create table Employee
+(
+ EmployeeID int Primary Key Not Null,
+ EmployeeFirstName varchar(25) Not Null,
+ EmployeeMiddleInitial char(1),
+ EmployeeLastName varchar(25) Not Null,
+ EmployeeIsManager bit
+);
+
+insert into Employee values (11, 'Gary', 'S', 'Mann', 1);
+insert into Employee values (22, 'Smith', ' ', 'Phan', 0);
+insert into Employee values (33, 'Susan', 'M', 'Munroe', 0);
+insert into Employee values (55, 'John', 'C', 'Roman', 1);
+
+--Create 8 tables with PK and FK
+
+create table FailedTransactionLog
+(
+ FailedTransactionID int Primary Key Not Null,
+ FailedTransactionErrorTypeID tinyint Not Null References FailedTransactionErrorType(FailedTransactionErrorTypeID),
+ FailedTransactionErrorTime datetime,
+ FailedTransactionXML xml
+);
+
+insert into FailedTransactionLog values (1, 2, '2017/05/11 02:12:31.155', 'www.abc.com');
+insert into FailedTransactionLog values (2, 3, '2015/09/17 01:22:35.155', 'www.def.ca');
+insert into FailedTransactionLog values (3, 1, '2018/07/21 19:12:51.255', 'www.xyz.com');
+insert into FailedTransactionLog values (4, 3, '2013/11/21 03:32:08.195', 'www.ghj-er.com');
+
+create table Account
+(
+ AccountID int Not Null Primary Key,
+ CurrentBalance int,
+ AccountTypeID tinyint References AccountType(AccountTypeID),
+ AccountStatusTypeID tinyint References AccountStatusType(AccountStatusTypeID),
+ InterestSavingsRateID tinyint References SavingsInterestRates(InterestSavingsRateID)
+);
+
+insert into Account values (1, 5023.57, 3, 1, 1);
+insert into Account values (2, 6056.11, 5, 9, 3);
+insert into Account values (3, 1123.53, 1, 5, 3);
+insert into Account values (4, 12067.77, 9, 3, 2);
+
+create table OverDraftLog
+(
+ AccountID int Not Null Primary Key References Account(AccountID),
+ OverDraftDate datetime,
+ OverDraftAmount money Not Null,
+ OverDradtTransactionXML xml Not Null
+);
+
+insert into OverDraftLog values (1, '2018/09/12 12:34:36', 35.68, 'www.def.com');
+insert into OverDraftLog values (2, '2017/05/22 22:32:36.136', 55.62, 'www.asd.com');
+insert into OverDraftLog values (3, '2018/11/17 15:56:30.156', 5.16, 'www.abc.ca');
+insert into OverDraftLog values (4, '2019/02/10 18:36:16.233', 105.38, 'www.bsn.com');
+
+create table Customer
+(
+ CustomerID int Not Null Primary Key,
+ AccountID int Not Null References Account(AccountID),
+ CustomerAddress1 varchar(30) Not Null,
+ CustomerAddress2 varchar(30),
+ CustomerFirstName varchar(30) Not Null ,
+ CustomerMiddleInitial char(1),
+ CustomerLastName varchar(30) Not Null,
+ City varchar(20) Not Null,
+ State char(2) Not Null,
+ ZipCode char(10) Not Null,
+ EmailAddress varchar(40),
+ HomePhone char(10),
+ CellPhone char(10) Not Null,
+ WorkPhone char(10),
+ SSN char(9) Not Null,
+ UserLoginID smallint Not Null References UserLogins(UserLoginID)
+);
+
+insert into Customer values (1, 2, '10 Ashash RD', '   ', 'Smith', 'D', 'John', 'Toronto', 'ON', 'M1K 2S8', '  ', '   ', '6473455678', '   ', '235678903', 22);
+insert into Customer values (2, 1, '35 Finach Ave', '   ', 'Larry', 'M', 'Doug', 'Montreal', 'QC', 'L3N 1S3', '  ', '   ', '4382355678', '   ', '239006703', 44);
+insert into Customer values (3, 3, '23 Bridel ST', '   ', 'Susan', ' ', 'Sean', 'Ottawa', 'ON', 'B3K 5N2', '  ', '6139902830', '6133453678', '   ', '335621607', 11);
+insert into Customer values (4, 4, '65 Greenwood, #1211', '   ', 'Gary', 'C', 'Arthur', 'Vancouver', 'BC', 'H1W 2N3', '  ', '   ', '5123803256', '   ', '255329021', 33);
+
+create table CustomerAccount
+(
+ AccountID int Not Null References Account(AccountID),
+ CustomerID int Not Null References Customer(CustomerID)
+);
+
+insert into CustomerAccount values (2, 3);
+insert into CustomerAccount values (1, 2);
+insert into CustomerAccount values (4, 1);
+insert into CustomerAccount values (3, 4);
+
+create table LoginAccount
+(
+ UserLoginID smallint Not Null References UserLogins(UserLoginID),
+ AccountID int Not Null References Account(AccountID)
+);
+
+insert into LoginAccount values (22, 1);
+insert into LoginAccount values (33, 4);
+insert into LoginAccount values (11, 2);
+insert into LoginAccount values (44, 3);
+
+create table UserSecurityAnswers
+(
+ UserLoginID smallint Not Null Primary Key References UserLogins(UserLoginID),
+ UserSecurityAnswer varchar(25) Not Null,
+ UserSecurityQuestionID tinyint Not Null References UserSecurityQuestions(UserSecurityQuestionID)
+);
+
+insert into UserSecurityAnswers values (11, 'Toyota', 1);
+insert into UserSecurityAnswers values (22, 'Montreal', 2);
+insert into UserSecurityAnswers values (33, 'Jessy', 3);
+insert into UserSecurityAnswers values (44, 'Dora', 4);
+
+create table TransactionLog
+(
+ TransactionID int Not Null Primary Key,
+ TransactionDate datetime,
+ TransactionTypeID tinyint Not Null References TransactionType(TransactionTypeID),
+ TransactionAmount money Not Null,
+ NewBalance money Not Null,
+ AccountID int Not Null References Account(AccountID),
+ CustomerID int Not Null References Customer(CustomerID),
+ EmployeeID int Not Null References Employee(EmployeeID),
+ UserLoginID smallint Not Null References UserLogins(UserLoginID)
+);
+
+insert into TransactionLog values (1, '2018/11/08 08:27:57.135', 3, 1553.00, 2360.70, 2, 1, 33, 22); 
+insert into TransactionLog values (2, '2017/12/28 21:47:33.205', 2, 355.65, 6870.69, 1, 3, 55, 33); 
+insert into TransactionLog values (3, '2018/07/16 20:15:53.185', 1, 1518.50, 5568.53, 4, 2, 11, 44); 
+insert into TransactionLog values (4, '2019/01/22 02:07:25.238', 4, 683.78, 3651.57, 3, 4, 22, 11); 
+
+--End
+
+--------------------------------Phase 2--------------------------------
+
+--- Question 1.	Create a view to get all customers with checking account from ON province. [Moderate]
+
+--Create view Account_Details_view 
+--as
+--Select AccountID, CurrentBalance, InterestSavingsRateID, AccountTypeDescription 
+-- Account a join AccountType b
+--on a.AccountTypeID = b.AccountTypeID;
+
+--Select * from Account_Details_view;
+
+Create view Checking_ON_view 
+as
+Select CustomerID, CustomerFirstName FirstName, CustomerMiddleInitial MI, CustomerLastName LastName, State, AccountTypeDescription 
+from Customer c join (Select AccountID, CurrentBalance, InterestSavingsRateID, AccountTypeDescription from Account a join AccountType b
+					on a.AccountTypeID = b.AccountTypeID) d
+on c.AccountID = d.AccountID
+Where State = 'ON' and AccountTypeDescription = 'Checking account';
+
+
+Select * from Checking_ON_view;
+
+--- Question 2.  Create a view to get all customers with total account balance (including interest rate) greater than 5000. [Advanced]
+
+--Create View Balance_InterestRate_view
+--as
+--Select AccountID, CurrentBalance, InterestRateValue
+--from Account a join SavingsInterestRates s
+--on a.InterestSavingsRateID = s.InterestSavingsRateID;
+
+--select * from Balance_InterestRate_view;
+
+Create View CustomersBalanceThan5000_view
+as
+Select CustomerID, CustomerFirstName FirstName, CustomerMiddleInitial MI, CustomerLastName LastName, CurrentBalance, InterestRateValue
+from Customer c join (Select AccountID, CurrentBalance, InterestRateValue
+from Account a join SavingsInterestRates s
+on a.InterestSavingsRateID = s.InterestSavingsRateID) b
+on c.AccountID = b.AccountID
+where CurrentBalance > 5000;
+
+
+select * from CustomersBalanceThan5000_view;
+
+--- Question 3.	Create a view to get counts of checking and savings accounts by customer. [Moderate]
+
+Create View CheckingSavingsCounts_view
+as
+Select CustomerID, CustomerFirstName FirstName, CustomerMiddleInitial MI, CustomerLastName LastName, AccountTypeDescription, count(AccountTypeDescription) Total 
+from Customer c join (Select AccountID, AccountTypeDescription from Account a join AccountType b
+					on a.AccountTypeID = b.AccountTypeID) d
+on c.AccountID = d.AccountID
+Where AccountTypeDescription = 'Checking account' OR AccountTypeDescription = 'Savings account'
+Group by CustomerID, CustomerFirstName, CustomerMiddleInitial, CustomerLastName, AccountTypeDescription;
+
+
+Select * from CheckingSavingsCounts_view;
+
+
+--- Question 4.	Create a view to get any particular user’s login and password using AccountId. [Moderate]
+
+
+Create View Access_Details_by_Customer_view
+as
+Select CustomerID, AccountID, CustomerFirstName, CustomerMIddleInitial, CustomerLastName, UserLogin, UserPassword
+from UserLogins m join (Select * from Customer a join TransactionLog b 
+						on a.AccountID = b.AccountID) n
+on m.UserLoginID = n.UserLoginID;
+
+
+Select * from Access_Details_by_Customer_view;
+
+
+--- Question 5.	Create a view to get all customers’ overdraft amount. [Moderate]
+
+Create View OverDraftbyCustomer_view
+as
+Select CustomerID, CustomerFirstName, CustomerMIddleInitial, CustomerLastName, OverDraftAmount
+from OverDraftLog o join Customer c
+on o.AccountID = c.AccountID;
+
+
+Select * from OverDraftbyCustomer_view;
+
+
+--- Question 6.	Create a stored procedure to add “User_” as a prefix to everyone’s login (username). [Moderate]
+
+Create Procedure spPrefixLogin
+as
+Update UserLogins set UserLogin = Concat('User_', Ltrim(UserLogin))
+select * from UserLogins;
+
+Execute spPrefixLogin
+
+--- Question 7.	Create a stored procedure that accepts AccountId as a parameter and returns customer’s full name. [Advanced]
+
+--Create Procedure QueryCustomerFullName @AccountID int
+--as 
+--Select CustomerID, CustomerFirstName, CustomerMiddleInitial, CustomerLastName 
+--from Customer
+--Where AccountID = @AccountID;
+
+--Execute QueryCustomerFullName 4;
+
+create Procedure spGetGetFullName
+@AccountId int,
+@fullname varchar(60) output
+as
+Begin
+  Select @fullname =  (CustomerFirstName + ' ' + CustomerLastName)  from tblCustomer Where AccountID = @AccountId
+End
+
+
+Declare @CustomerFullname  varchar(60) 
+Execute spGetGetFullName 2, @CustomerFullname output
+print @CustomerFullname;
+
+--- Question 8.	Create a stored procedure that takes a deposit as a parameter and updates CurrentBalance value for that particular account. [Advanced]
+
+--Create Procedure AccountUpdate_Deposit @deposit money
+--as
+--Create View UpdateAccount_view
+--as
+--select CurrentBalance, TransactionAmount, NewBalance 
+--from Account a join TransactionLog t
+--on a.AccountID = t.AccountID
+--update UpdateAccount_view set NewBalance = CurrentBalance + @deposit;
+
+--Execute AccountUpdate_Deposit 320.25
+
+create Procedure DoDeposit
+@depositAmt float,
+@accountID int
+as
+
+Begin
+	Begin Try
+		Begin Transaction
+        Declare @curBal float;
+
+	    Select @curBal = CurrentBalance from tblAccount Where AccountID = @accountID; 
+
+		Update tblAccount set CurrentBalance = CurrentBalance + @depositAmt
+		Where AccountID = @accountID;
+		
+		-- we also need to insert a record in the Transaction log table, assuming some values for the 
+		-- TransactionID, CustomerID, EmployeeID, UserLoginID
+		Insert into tblTransactionLog Values(1006,'25-Oct-2018',2,@depositAmt,@curBal + @depositAmt,@accountID,1,1,1)
+
+		Commit Transaction
+	End Try
+	Begin Catch
+		Rollback Transaction
+	End Catch
+End
+
+-- tsting the procedure
+Execute DoDeposit 400.0, 1234;
+Select * from tblAccount;
+
+
+
+--- Question 9.	Create a stored procedure that takes a withdrawal amount as a parameter and updates CurrentBalance value for that particular account. [Advanced]
+
+--Create Procedure AccountUpdate_Withdraw @withdraw money
+--as
+--Create View UpdateAccount_view_2
+--as
+--select CurrentBalance, TransactionAmount, NewBalance 
+--from Account a join TransactionLog t
+--on a.AccountID = t.AccountID
+--update UpdateAccount_view_2 set NewBalance = CurrentBalance - @withdraw
+--select NewBalance from UpdateAccount_view_2;
+
+--Execute AccountUpdate_Withdraw 320.25
+
+-- Q9 Create a stored procedure that takes a withdrawal amount as a parameter and updates CurrentBalance value for that particular account. [Advanced]
+Create Procedure DoWithdrawal
+@withdrawAmt float,
+@accountID int
+as
+
+Begin
+	Begin Try
+		Begin Transaction
+        Declare @curBal float;
+
+	    Select @curBal = CurrentBalance from tblAccount Where AccountID = @accountID;  
+
+		Update tblAccount set CurrentBalance = CurrentBalance - @withdrawAmt
+		Where AccountID = @accountID;
+		
+		-- we also need to insert a record in the Transaction log table, assuming some values for the 
+		-- TransactionID, CustomerID, EmployeeID, UserLoginID
+		Insert into tblTransactionLog Values(1007,'25-Oct-2018',3,@withdrawAmt,@curBal - @withdrawAmt,@accountID,1,1,1)
+
+		Commit Transaction
+	End Try
+	Begin Catch
+		Rollback Transaction
+	End Catch
+End
+
+-- tsting the procedure
+Execute DoWithdrawal 400.0, 1234;
+Select * from tblAccount;
+
+
+--- Question 10.	Write a query to remove SSN column from Customer table. [Basic]
+
+Alter table Customer
+drop column SSN
+
+select * from Customer;
